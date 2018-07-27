@@ -259,6 +259,7 @@ if DEBUG:
     DEBUG_TOOLBAR_CONFIG = {
         'RESULTS_STORE_SIZE': 100}
 
+
 ENABLE_SILK = get_bool_from_env('ENABLE_SILK', False)
 if ENABLE_SILK:
     MIDDLEWARE.insert(0, 'silk.middleware.SilkyMiddleware')
@@ -307,8 +308,8 @@ AUTH_USER_MODEL = 'account.User'
 
 LOGIN_URL = '/account/login/'
 
-DEFAULT_COUNTRY = os.environ.get('DEFAULT_COUNTRY', 'US')
-DEFAULT_CURRENCY = os.environ.get('DEFAULT_CURRENCY', 'USD')
+DEFAULT_COUNTRY = os.environ.get('DEFAULT_COUNTRY', 'INDIA')
+DEFAULT_CURRENCY = os.environ.get('DEFAULT_CURRENCY', 'INR')
 DEFAULT_DECIMAL_PLACES = get_currency_fraction(DEFAULT_CURRENCY)
 AVAILABLE_CURRENCIES = [DEFAULT_CURRENCY]
 COUNTRIES_OVERRIDE = {
@@ -339,7 +340,13 @@ PAYMENT_HOST = get_host
 PAYMENT_MODEL = 'order.Payment'
 
 PAYMENT_VARIANTS = {
-    'default': ('payments.dummy.DummyProvider', {})}
+    'default': ('payments.dummy.DummyProvider', {}),
+    'paypal': ('payments.paypal.PaypalProvider', {
+        'client_id': 'AUq5woitGoiO00typZYKxJ_8qO9FZ-v9EQUQXcg_0Y-pKKP4ZcE8cWdGYK5XkDt2SbMOsvceVnVCjC4T',
+        'secret': 'EF6rZZKxC1_yseQQqlon2P76AdSFhz7shtxLN2b0TUL5AfghwVtsjGD5DyG2JndWb41CC5Uchanqt7sO',
+        'endpoint': 'https://api.sandbox.paypal.com',
+        'capture': False})
+    }
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 
@@ -349,7 +356,8 @@ if not CACHES['default']['BACKEND'].endswith('LocMemCache'):
     SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 CHECKOUT_PAYMENT_CHOICES = [
-    ('default', 'Dummy provider')]
+    ('default', 'Dummy provider'),
+    ('paypal', 'PaypalProvider')]
 
 MESSAGE_TAGS = {
     messages.ERROR: 'danger'}
