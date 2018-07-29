@@ -345,7 +345,7 @@ PAYMENT_VARIANTS = {
         'client_id': os.environ.get('PAYPAL_CLIENT_ID'),
         'secret': os.environ.get('PAYPAL_SECRET'),
         'endpoint': os.environ.get('PAYPAL_ENDPOINT'),
-        'capture': os.environ.get('PAYPAL_CAPTURE')})
+        'capture': os.environ.get('PAYPAL_CAPTURE', False)})
     }
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
