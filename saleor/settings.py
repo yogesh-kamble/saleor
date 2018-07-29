@@ -342,10 +342,10 @@ PAYMENT_MODEL = 'order.Payment'
 PAYMENT_VARIANTS = {
     'default': ('payments.dummy.DummyProvider', {}),
     'paypal': ('payments.paypal.PaypalProvider', {
-        'client_id': 'AUq5woitGoiO00typZYKxJ_8qO9FZ-v9EQUQXcg_0Y-pKKP4ZcE8cWdGYK5XkDt2SbMOsvceVnVCjC4T',
-        'secret': 'EF6rZZKxC1_yseQQqlon2P76AdSFhz7shtxLN2b0TUL5AfghwVtsjGD5DyG2JndWb41CC5Uchanqt7sO',
-        'endpoint': 'https://api.sandbox.paypal.com',
-        'capture': False})
+        'client_id': os.environ.get('PAYPAL_CLIENT_ID'),
+        'secret': os.environ.get('PAYPAL_SECRET'),
+        'endpoint': os.environ.get('PAYPAL_ENDPOINT'),
+        'capture': os.environ.get('PAYPAL_CAPTURE')})
     }
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
