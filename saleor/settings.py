@@ -9,6 +9,8 @@ from django.utils.translation import gettext_lazy as _, pgettext_lazy
 from django_prices.templatetags.prices_i18n import get_currency_fraction
 
 from . import __version__
+from dotenv import load_dotenv
+load_dotenv(dotenv_path='.env')
 
 
 def get_list(text):
