@@ -20,6 +20,7 @@ ARG STATIC_URL
 # Install node_modules
 ADD webpack.config.js app.json package.json package-lock.json /app/
 WORKDIR /app
+RUN npm cache clean --force
 RUN npm install
 
 # Build static

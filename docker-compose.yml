@@ -39,7 +39,28 @@ services:
       - db
       - redis
       - search
-    ports:
-      - '8000:8000'
     volumes:
       - .:/app:Z
+      - dsne-django-static:/app/saleor/static
+    networks:
+      - nginx_network
+  nginx:
+    container_name: dsne-nginx
+    image: nginx:1.13
+    ports:
+      - 8000:80
+    networks:
+      - nginx_network
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    ports:
+      - 8000:80
+    depends_on:
+      - web
+
+volumes:
+  dsne-django-static:
+
+networks:
+  nginx_network:
+    driver: bridge
