@@ -20,6 +20,7 @@ from ...account.utils import store_user_address
 from ...checkout import AddressType
 from ...core.utils.taxes import get_tax_rate_by_name, get_taxes_for_country
 from ...core.utils.text import strip_html_and_truncate
+from ...dashboard.menu.utils import update_menu
 from ...discount import DiscountValueType, VoucherType
 from ...discount.models import Sale, Voucher
 from ...menu.models import Menu
@@ -309,7 +310,8 @@ def create_variant(product, **kwargs):
         variant.cost_price = (variant.base_price * Decimal(
             fake.random_int(10, 99) / 100)).quantize()
     if variant.attributes:
-        variant.name = get_name_from_attributes(variant)
+        attributes = variant.product.product_type.variant_attributes.all()
+        variant.name = get_name_from_attributes(variant, attributes)
     variant.save()
     return variant
 
@@ -539,10 +541,13 @@ def create_vouchers():
         yield 'Value voucher already exists'
 
 
-def set_featured_products(how_many=8):
-    pks = Product.objects.order_by('?')[:how_many].values_list('pk', flat=True)
-    Product.objects.filter(pk__in=pks).update(is_featured=True)
-    yield 'Featured products created'
+def set_homepage_collection():
+    homepage_collection = Collection.objects.order_by('?').first()
+    site = Site.objects.get_current()
+    site_settings = site.settings
+    site_settings.homepage_collection = homepage_collection
+    site_settings.save()
+    yield 'Homepage collection assigned'
 
 
 def add_address_to_admin(email):
@@ -633,6 +638,8 @@ def create_menus():
             name=page.title,
             page=page)
         yield 'Created footer menu'
+    update_menu(top_menu)
+    update_menu(bottom_menu)
     site = Site.objects.get_current()
     site_settings = site.settings
     site_settings.top_menu = top_menu

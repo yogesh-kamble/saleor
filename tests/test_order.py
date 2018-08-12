@@ -12,7 +12,6 @@ from saleor.checkout.utils import create_order
 from saleor.core.utils.taxes import (
     DEFAULT_TAX_RATE_NAME, get_tax_rate_by_name, get_taxes_for_country)
 from saleor.order import FulfillmentStatus, OrderStatus, models
-from saleor.order.forms import OrderNoteForm
 from saleor.order.models import Order
 from saleor.order.utils import (
     add_variant_to_order, cancel_fulfillment, cancel_order, recalculate_order,
@@ -64,11 +63,11 @@ def test_get_tax_rate_by_name_empty_taxes(product):
 
 
 def test_add_variant_to_order_adds_line_for_new_variant(
-        order_with_lines, product, taxes):
+        order_with_lines, product, taxes, product_translation_fr, settings):
     order = order_with_lines
     variant = product.variants.get()
     lines_before = order.lines.count()
-
+    settings.LANGUAGE_CODE = 'fr'
     add_variant_to_order(order, variant, 1, taxes=taxes)
 
     line = order.lines.last()
@@ -78,6 +77,8 @@ def test_add_variant_to_order_adds_line_for_new_variant(
     assert line.unit_price == TaxedMoney(
         net=Money('8.13', 'USD'), gross=Money(10, 'USD'))
     assert line.tax_rate == taxes[product.tax_rate]['value']
+    assert line.translated_product_name == variant.display_product(
+        translated=True)
 
 
 @pytest.mark.parametrize('track_inventory', (True, False))
@@ -160,13 +161,29 @@ def test_view_connect_order_with_user_different_email(
     assert order.user is None
 
 
-def test_add_note_to_order(order_with_lines):
+def test_view_order_with_deleted_variant(authorized_client, order_with_lines):
     order = order_with_lines
-    note = models.OrderNote(order=order, user=order.user)
-    note_form = OrderNoteForm({'content': 'test_note'}, instance=note)
-    note_form.is_valid()
-    note_form.save()
-    assert order.notes.first().content == 'test_note'
+    order_details_url = reverse('order:details', kwargs={'token': order.token})
+
+    # delete a variant associated to the order
+    order.lines.first().variant.delete()
+
+    # check if the order details view handles the deleted variant
+    response = authorized_client.get(order_details_url)
+    assert response.status_code == 200
+
+
+def test_view_fulfilled_order_with_deleted_variant(
+        authorized_client, fulfilled_order):
+    order = fulfilled_order
+    order_details_url = reverse('order:details', kwargs={'token': order.token})
+
+    # delete a variant associated to the order
+    order.lines.first().variant.delete()
+
+    # check if the order details view handles the deleted variant
+    response = authorized_client.get(order_details_url)
+    assert response.status_code == 200
 
 
 @pytest.mark.parametrize('track_inventory', (True, False))
@@ -443,3 +460,24 @@ def test_create_user_after_order(order, client):
     user = User.objects.filter(email='hello@mirumee.com').first()
     assert user is not None
     assert user.orders.filter(token=order.token).exists()
+
+
+def test_view_order_details(order, client):
+    url = reverse('order:details', kwargs={'token': order.token})
+    response = client.get(url)
+    assert response.status_code == 200
+
+
+def test_add_order_note_view(order, authorized_client, customer_user):
+    order.user_email = customer_user.email
+    order.save()
+    url = reverse('order:details', kwargs={'token': order.token})
+    customer_note = 'bla-bla note'
+    data = {'customer_note': customer_note}
+
+    response = authorized_client.post(url, data)
+
+    redirect_url = reverse('order:details', kwargs={'token': order.token})
+    assert get_redirect_location(response) == redirect_url
+    order.refresh_from_db()
+    assert order.customer_note == customer_note

@@ -493,16 +493,7 @@ def test_note_in_created_order(request_cart_with_item, address):
     request_cart_with_item.save()
     order = create_order(
         request_cart_with_item, 'tracking_code', discounts=None, taxes=None)
-    assert order.notes.filter(content='test_note').exists()
-
-
-def test_note_in_created_order_empty_note(request_cart_with_item, address):
-    request_cart_with_item.shipping_address = address
-    request_cart_with_item.note = ''
-    request_cart_with_item.save()
-    order = create_order(
-        request_cart_with_item, 'tracking_code', discounts=None, taxes=None)
-    assert not order.notes.all()
+    assert order.customer_note == request_cart_with_item.note
 
 
 @pytest.mark.parametrize(
@@ -739,21 +730,24 @@ def test_get_voucher_for_cart_no_voucher_code(cart):
     assert cart_voucher is None
 
 
-def test_remove_voucher_from_cart(cart_with_voucher):
+def test_remove_voucher_from_cart(cart_with_voucher, voucher_translation_fr):
     cart = cart_with_voucher
     remove_voucher_from_cart(cart)
 
     assert not cart.voucher_code
     assert not cart.discount_name
+    assert not cart.translated_discount_name
     assert cart.discount_amount == ZERO_MONEY
 
 
-def test_recalculate_cart_discount(cart_with_voucher, voucher):
+def test_recalculate_cart_discount(
+        cart_with_voucher, voucher, voucher_translation_fr, settings):
+    settings.LANGUAGE_CODE = 'fr'
     voucher.discount_value = 10
     voucher.save()
 
     recalculate_cart_discount(cart_with_voucher, None, None)
-
+    assert cart_with_voucher.translated_discount_name == voucher_translation_fr.name  # noqa
     assert cart_with_voucher.discount_amount == Money('10.00', 'USD')
 
 
