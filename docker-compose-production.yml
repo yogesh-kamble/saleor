@@ -9,12 +9,14 @@ services:
       - '127.0.0.1:5432:5432'
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
-    networks:
+    networks:  # <-- connect to the bridge
       - database1_network
   redis:
     image: redis
     ports:
       - '127.0.0.1:6379:6379'
+    networks:
+      - database1_network
   celery:
     build:
       context: .
@@ -25,6 +27,8 @@ services:
       - redis
     depends_on:
       - redis
+    networks:  # <-- connect to the bridge
+      - database1_network
   search:
     image: elasticsearch:5.4.3
     mem_limit: 512m
@@ -40,22 +44,25 @@ services:
     depends_on:
       - db
       - redis
-      - search
+    volumes:
+      - dsne-django-static:/app/static/
     networks:
-      - nginx_network
       - database1_network
-
+      - nginx_network
+    #ports:
+    #  - 8000:8000
   nginx:
+    container_name: dsne-nginx
     image: nginx:1.13
     ports:
       - 80:80
-    volumes:
-      - ./config/nginx/conf.d:/etc/nginx/conf.d
-      - dsne-django-static:/app/static  # <-- bind the static volume
-    depends_on:
-      - web
     networks:
       - nginx_network
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      #- dsne-django-static:/app/static/
+    depends_on:
+      - web
 
 volumes:
   dsne-django-static:
@@ -63,5 +70,5 @@ volumes:
 networks:
   nginx_network:
     driver: bridge
-  database1_network:
+  database1_network:  # <-- add the bridge
     driver: bridge
