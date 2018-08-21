@@ -1,75 +1,77 @@
 version: '2'
+
 services:
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_USER=saleor
-      - POSTGRES_PASSWORD=saleor
-    ports:
-      - '127.0.0.1:5432:5432'
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-    networks:  # <-- connect to the bridge
-      - database1_network
-  redis:
-    image: redis
-    ports:
-      - '127.0.0.1:6379:6379'
-    networks:
-      - database1_network
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file: common.env
-    command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
-    links:
-      - redis
-    depends_on:
-      - redis
-    networks:  # <-- connect to the bridge
-      - database1_network
-  search:
-    image: elasticsearch:5.4.3
-    mem_limit: 512m
-    environment:
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - '127.0.0.1:9200:9200'
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
+    container_name: saleor-web
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+    ports:
+      - 8000:8000
+    volumes:
+      - saleor-app:/app:Z
     env_file: common.env
     depends_on:
       - db
       - redis
-    volumes:
-      - dsne-django-static:/app/static/
+      - search
+
+  db:
+    image: library/postgres:latest
+    container_name: saleor-postgres
+    restart: unless-stopped
     networks:
-      - database1_network
-      - nginx_network
-    #ports:
-    #  - 8000:8000
-  nginx:
-    container_name: dsne-nginx
-    image: nginx:1.13
+      - saleor-backend-tier
     ports:
-      - 80:80
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=saleor
+      - POSTGRES_PASSWORD=saleor
+
+  redis:
+    image: library/redis:latest
+    container_name: saleor-redis
+    restart: unless-stopped
     networks:
-      - nginx_network
+      - saleor-backend-tier
+    ports:
+      - 6379:6379
+
+  celery:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: saleor-celery
+    command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
     volumes:
-      - ./nginx:/etc/nginx/conf.d
-      #- /docker/letsencrypt-docker-nginx/src/letsencrypt/letsencrypt-site:/usr/share/nginx/html
-      #- dsne-django-static:/app/static/
+      - saleor-app:/app:Z
+    env_file: common.env
     depends_on:
-      - web
+      - redis
+
+  search:
+    image: elasticsearch:5.4.3
+    container_name: saleor-elasticsearch
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+    ports:
+      - 9200:9200
+    # See https://github.com/docker/compose/issues/4513 if updating to version '3'
+    mem_limit: 512m
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
 volumes:
-  dsne-django-static:
+  saleor-app:
+    driver: local
 
 networks:
-  nginx_network:
-    driver: bridge
-  database1_network:  # <-- add the bridge
+  saleor-backend-tier:
     driver: bridge
