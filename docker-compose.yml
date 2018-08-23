@@ -9,10 +9,11 @@ services:
     restart: unless-stopped
     networks:
       - saleor-backend-tier
+      - nginx_network
     ports:
       - 8000:8000
-    volumes:
-      - saleor-app:/app:Z
+    #volumes:
+    #  - saleor-app:/app:Z
     env_file: common.env
     depends_on:
       - db
@@ -25,6 +26,8 @@ services:
     restart: unless-stopped
     networks:
       - saleor-backend-tier
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
     environment:
@@ -49,8 +52,8 @@ services:
     restart: unless-stopped
     networks:
       - saleor-backend-tier
-    volumes:
-      - saleor-app:/app:Z
+    #volumes:
+    #  - saleor-app:/app:Z
     env_file: common.env
     depends_on:
       - redis
@@ -67,11 +70,26 @@ services:
     mem_limit: 512m
     environment:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  nginx:
+    container_name: dsne-nginx
+    image: nginx:1.13
+    ports:
+      - 80:80
+    networks:
+      - nginx_network
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      #- /docker/letsencrypt-docker-nginx/src/letsencrypt/letsencrypt-site:/usr/share/nginx/html
+      #- dsne-django-static:/app/static/
+    depends_on:
+      - web
 
-volumes:
-  saleor-app:
-    driver: local
+#volumes:
+#  saleor-app:
+#    driver: local
 
 networks:
   saleor-backend-tier:
+    driver: bridge
+  nginx_network:
     driver: bridge
