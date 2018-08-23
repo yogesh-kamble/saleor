@@ -74,4 +74,4 @@ ENV PORT 8000
 
 ENV PYTHONUNBUFFERED 1
 ENV PROCESSES 4
-CMD ["uwsgi", "/app/saleor/wsgi/uwsgi.ini"]
+CMD ["gunicorn", "-c", "/app/saleor/wsgi/gunicorn.ini", "saleor.wsgi"]
