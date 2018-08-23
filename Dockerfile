@@ -13,14 +13,13 @@ RUN pip install -r /app/requirements.txt
 
 
 ### Build static assets
-FROM node:8.6.0 as build-nodejs
+FROM node:10 as build-nodejs
 
 ARG STATIC_URL
 
 # Install node_modules
-ADD webpack.config.js app.json package.json package-lock.json /app/
+ADD webpack.config.js app.json package.json package-lock.json tsconfig.json webpack.d.ts /app/
 WORKDIR /app
-RUN npm cache clean --force
 RUN npm install
 
 # Build static
@@ -75,4 +74,4 @@ ENV PORT 8000
 
 ENV PYTHONUNBUFFERED 1
 ENV PROCESSES 4
-CMD ["gunicorn", "-c", "/app/saleor/wsgi/gunicorn.ini", "saleor.wsgi"]
+CMD ["uwsgi", "/app/saleor/wsgi/uwsgi.ini"]
