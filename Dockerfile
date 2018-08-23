@@ -20,7 +20,6 @@ ARG STATIC_URL
 # Install node_modules
 ADD webpack.config.js app.json package.json package-lock.json tsconfig.json webpack.d.ts /app/
 WORKDIR /app
-RUN npm cache clean --force
 RUN npm install
 
 # Build static
@@ -75,4 +74,4 @@ ENV PORT 8000
 
 ENV PYTHONUNBUFFERED 1
 ENV PROCESSES 4
-CMD ["gunicorn", "-c", "/app/saleor/wsgi/gunicorn.ini", "saleor.wsgi"]
+CMD ["uwsgi", "/app/saleor/wsgi/uwsgi.ini"]
