@@ -346,7 +346,10 @@ PAYMENT_VARIANTS = {
         'client_id': os.environ.get('PAYPAL_CLIENT_ID'),
         'secret': os.environ.get('PAYPAL_SECRET'),
         'endpoint': os.environ.get('PAYPAL_ENDPOINT'),
-        'capture': os.environ.get('PAYPAL_CAPTURE', False)})
+        'capture': os.environ.get('PAYPAL_CAPTURE', False)}),
+    'razorpay': ('django_payments_razorpay.RazorPayProvider', {
+        'public_key': os.environ.get('RAZORPAY_PUBLIC_KEY'),
+        'secret_key': os.environ.get('RAZORPAY_SECRET_KEY')})
 }
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -357,8 +360,7 @@ if not CACHES['default']['BACKEND'].endswith('LocMemCache'):
     SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 CHECKOUT_PAYMENT_CHOICES = [
-    ('default', 'Dummy provider'),
-    ('paypal', 'PaypalProvider')]
+    ('razorpay', 'RazorPay')]
 
 MESSAGE_TAGS = {
     messages.ERROR: 'danger'}
