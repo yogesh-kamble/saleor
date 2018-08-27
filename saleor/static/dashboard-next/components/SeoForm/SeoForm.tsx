@@ -4,12 +4,12 @@ import CardContent from "@material-ui/core/CardContent";
 import { withStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Typography from "@material-ui/core/Typography";
+import * as classNames from "classnames";
 import * as React from "react";
 
 import i18n from "../../i18n";
 import CardTitle from "../CardTitle";
 import FormSpacer from "../FormSpacer";
-import Skeleton from "../Skeleton";
 import Toggle from "../Toggle";
 
 interface SeoFormProps {
@@ -92,7 +92,9 @@ const SeoForm = decorate<SeoFormProps>(
           />
           <CardContent>
             {helperText && (
-              <Typography className={toggled ? classes.helperText : ""}>
+              <Typography
+                className={classNames({ [classes.helperText]: toggled })}
+              >
                 {helperText}
               </Typography>
             )}
