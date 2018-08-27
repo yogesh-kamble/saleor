@@ -13,12 +13,12 @@ import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import MenuIcon from "@material-ui/icons/Menu";
 import PersonIcon from "@material-ui/icons/Person";
+import * as classNames from "classnames";
 import * as React from "react";
 import SVG from "react-inlinesvg";
 
 import * as saleorLogo from "../images/logo.svg";
 import { UserContext } from "./auth";
-import Container from "./components/Container";
 import MenuToggle from "./components/MenuToggle";
 import Navigator from "./components/Navigator";
 import Toggle from "./components/Toggle";
@@ -376,10 +376,10 @@ export const AppRoot = decorate(
                                       {user.email}
                                     </Typography>
                                     <ArrowDropdown
-                                      className={[
-                                        classes.arrow,
-                                        menuOpen ? classes.rotate : undefined
-                                      ].join(" ")}
+                                      className={classNames({
+                                        [classes.arrow]: true,
+                                        [classes.rotate]: menuOpen
+                                      })}
                                     />
                                   </Hidden>
                                   <Hidden mdUp>

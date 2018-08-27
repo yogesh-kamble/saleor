@@ -9,6 +9,7 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import Typography from "@material-ui/core/Typography";
+import * as classNames from "classnames";
 import * as React from "react";
 
 import { MoneyType } from "../..";
@@ -36,13 +37,6 @@ interface ProductVariantsProps {
 }
 
 const decorate = withStyles(theme => {
-  const dot = {
-    borderRadius: "100%",
-    display: "inline-block",
-    height: theme.spacing.unit,
-    marginRight: theme.spacing.unit,
-    width: theme.spacing.unit
-  };
   return {
     denseTable: {
       "& td, & th": {
@@ -66,7 +60,6 @@ export const ProductVariants = decorate<ProductVariantsProps>(
     classes,
     variants,
     fallbackPrice,
-    onAttributesEdit,
     onRowClick,
     onVariantAdd
   }) => (
@@ -114,7 +107,7 @@ export const ProductVariants = decorate<ProductVariantsProps>(
                 key={variant ? variant.id : "skeleton"}
               >
                 <TableCell
-                  className={[classes.textLeft, classes.link].join(" ")}
+                  className={classNames(classes.textLeft, classes.link)}
                   onClick={onRowClick(variant.id)}
                 >
                   {variant ? variant.name || variant.sku : <Skeleton />}
