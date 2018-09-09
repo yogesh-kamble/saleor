@@ -4,6 +4,8 @@ import random
 import unicodedata
 from datetime import date
 from decimal import Decimal
+import csv
+from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -43,75 +45,30 @@ PRODUCTS_LIST_DIR = 'products-list/'
 GROCERIES_CATEGORY = {'name': 'Groceries', 'image_name': 'groceries.jpg'}
 
 DEFAULT_SCHEMA = {
-    'T-Shirt': {
+    'Masala': {
         'category': {
-            'name': 'Apparel',
+            'name': 'Foodgrains, oil & Masala',
             'image_name': 'apparel.jpg'},
         'product_attributes': {
-            'Color': ['Blue', 'White'],
-            'Collar': ['Round', 'V-Neck', 'Polo'],
-            'Brand': ['Saleor']},
+            'Brand': ['Orgo King']},
         'variant_attributes': {
-            'Size': ['XS', 'S', 'M', 'L', 'XL', 'XXL']},
-        'images_dir': 't-shirts/',
-        'is_shipping_required': True},
-    'Mugs': {
+            'Size': ['500 gms', '1 kg']},
+        'images_dir': 'grocery/',
+        'is_shipping_required': True
+    },
+    'Atta': {
         'category': {
-            'name': 'Accessories',
-            'image_name': 'accessories.jpg'},
+            'name': 'Atta, Flours & Sooji',
+            'image_name': 'apparel.jpg'},
         'product_attributes': {
-            'Brand': ['Saleor']},
-        'variant_attributes': {},
-        'images_dir': 'mugs/',
-        'is_shipping_required': True},
-    'Coffee': {
-        'category': {
-            'name': 'Coffees',
-            'image_name': 'coffees.jpg',
-            'parent': GROCERIES_CATEGORY},
-        'product_attributes': {
-            'Coffee Genre': ['Arabica', 'Robusta'],
-            'Brand': ['Saleor']},
+            'Brand': ['Orgo King']},
         'variant_attributes': {
-            'Box Size': ['100g', '250g', '500g', '1kg']},
-        'different_variant_prices': True,
-        'images_dir': 'coffee/',
-        'is_shipping_required': True},
-    'Candy': {
-        'category': {
-            'name': 'Candies',
-            'image_name': 'candies.jpg',
-            'parent': GROCERIES_CATEGORY},
-        'product_attributes': {
-            'Flavor': ['Sour', 'Sweet'],
-            'Brand': ['Saleor']},
-        'variant_attributes': {
-            'Candy Box Size': ['100g', '250g', '500g']},
-        'images_dir': 'candy/',
-        'is_shipping_required': True},
-    'E-books': {
-        'category': {
-            'name': 'Books',
-            'image_name': 'books.jpg'},
-        'product_attributes': {
-            'Author': ['John Doe', 'Milionare Pirate'],
-            'Publisher': ['Mirumee Press', 'Saleor Publishing'],
-            'Language': ['English', 'Pirate']},
-        'variant_attributes': {},
-        'images_dir': 'books/',
-        'is_shipping_required': False},
-    'Books': {
-        'category': {
-            'name': 'Books',
-            'image_name': 'books.jpg'},
-        'product_attributes': {
-            'Author': ['John Doe', 'Milionare Pirate'],
-            'Publisher': ['Mirumee Press', 'Saleor Publishing'],
-            'Language': ['English', 'Pirate']},
-        'variant_attributes': {
-            'Cover': ['Soft', 'Hard']},
-        'images_dir': 'books/',
-        'is_shipping_required': True}}
+            'Size': ['500 gms', '1 kg']},
+        'images_dir': 'atta/',
+        'is_shipping_required': True
+    }
+}
+
 COLLECTIONS_SCHEMA = [
     {
         'name': 'Summer collection',
@@ -150,6 +107,20 @@ def create_product_type_with_attributes(name, schema):
 def create_product_types_by_schema(root_schema):
     results = []
     for product_type_name, schema in root_schema.items():
+        product_type = create_product_type_with_attributes(
+            product_type_name, schema)
+        results.append((product_type, schema))
+    return results
+
+def create_product_types_by_csv(csv_file):
+    result = defaultdict(list)  # each entry of the dict is, by default, an empty list
+
+    with open(csv_file, 'rb') as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        for row in csvreader:
+            result[row[0]].append(row[1])
+
+    for product_type_name, schema in result.items():
         product_type = create_product_type_with_attributes(
             product_type_name, schema)
         results.append((product_type, schema))
@@ -232,6 +203,15 @@ def create_products_by_type(
 def create_products_by_schema(placeholder_dir, how_many, create_images,
                               stdout=None, schema=DEFAULT_SCHEMA):
     for product_type, type_schema in create_product_types_by_schema(schema):
+        create_products_by_type(
+            product_type, type_schema, placeholder_dir,
+            how_many=how_many, create_images=create_images, stdout=stdout)
+
+
+
+
+def create_products_by_csv(placeholder_dir,csv_file='data.csv', stdout=None):
+    for product_type, type_schema in create_product_types_by_csv(csv_file):
         create_products_by_type(
             product_type, type_schema, placeholder_dir,
             how_many=how_many, create_images=create_images, stdout=stdout)
