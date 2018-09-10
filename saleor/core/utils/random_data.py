@@ -114,17 +114,12 @@ def create_product_types_by_schema(root_schema):
 
 def create_product_types_by_csv(csv_file):
     result = defaultdict(list)  # each entry of the dict is, by default, an empty list
-
     with open(csv_file, 'rb') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
         for row in csvreader:
-            result[row[0]].append(row[1])
-
-    for product_type_name, schema in result.items():
-        product_type = create_product_type_with_attributes(
-            product_type_name, schema)
-        results.append((product_type, schema))
-    return results
+            product_type = create_product_type_with_attributes(row[0], row)
+            result.append((product_type, row))
+    return result
 
 
 def set_product_attributes(product, product_type):
@@ -168,9 +163,10 @@ def create_products_by_type(
         stdout=None):
     category = get_or_create_category(schema['category'], placeholder_dir)
 
-    for dummy in range(how_many):
+    for row in range(0, len(schema)):
         product = create_product(
-            product_type=product_type, category=category)
+            product_type=product_type, category=category, name=schema['name'], description=schema['description'],
+            price=schema['price'])
         set_product_attributes(product, product_type)
         if create_images:
             type_placeholders = os.path.join(
@@ -211,7 +207,7 @@ def create_products_by_schema(placeholder_dir, how_many, create_images,
 
 
 def create_products_by_csv(placeholder_dir,csv_file='data.csv', stdout=None):
-    for product_type, type_schema in create_product_types_by_csv(csv_file):
+    for product_type, type_row in create_product_types_by_csv(csv_file):
         create_products_by_type(
             product_type, type_schema, placeholder_dir,
             how_many=how_many, create_images=create_images, stdout=stdout)
@@ -246,12 +242,12 @@ def get_or_create_category(category_schema, placeholder_dir):
     else:
         parent_id = None
     category_name = category_schema['name']
-    image_name = category_schema['image_name']
-    image_dir = get_product_list_images_dir(placeholder_dir)
+    # image_name = category_schema['image_name']
+    # image_dir = get_product_list_images_dir(placeholder_dir)
     defaults = {
-        'description': fake.text(),
-        'slug': fake.slug(category_name),
-        'background_image': get_image(image_dir, image_name)}
+        'description': category_schema['description']}
+        #'slug': fake.slug(category_name)}
+        # 'background_image': get_image(image_dir, image_name)}
     return Category.objects.get_or_create(
         name=category_name, parent_id=parent_id, defaults=defaults)[0]
 
@@ -269,9 +265,8 @@ def get_or_create_collection(name, placeholder_dir, image_name):
 
 
 def create_product(**kwargs):
-    description = fake.paragraphs(5)
+    description = kwargs.get('description')
     defaults = {
-        'name': fake.company(),
         'price': fake.money(),
         'description': '\n\n'.join(description),
         'seo_description': strip_html_and_truncate(description[0], 300)}
