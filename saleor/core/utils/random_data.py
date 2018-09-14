@@ -6,6 +6,7 @@ from datetime import date
 from decimal import Decimal
 import csv
 from collections import defaultdict
+import re
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -113,11 +114,22 @@ def create_product_types_by_schema(root_schema):
     return results
 
 def create_product_types_by_csv(csv_file):
-    result = defaultdict(list)  # each entry of the dict is, by default, an empty list
-    with open(csv_file, 'rb') as csvfile:
-        csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+    result = []
+    with open(csv_file, encoding='UTF-8') as csvfile:
+        csvreader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
         for row in csvreader:
-            product_type = create_product_type_with_attributes(row[0], row)
+            # <option value=""500gms"" class=""attached enabled"">500gms</option><option value=""1kg"" class=""attached enabled"">1kg</option>"
+            '''
+            'product_attributes': {
+                'Color': ['Blue', 'White'],
+                'Collar': ['Round', 'V-Neck', 'Polo'],
+            '''
+            attributes_value = re.findall(r'value=""(\w+)""', row['variants'])
+            if (attributes_value):
+                row['product_attributes'] = {
+                    'Size': attributes_value
+                }
+            product_type = create_product_type_with_attributes('Affiliate_Product', row)
             result.append((product_type, row))
     return result
 
@@ -161,12 +173,12 @@ def get_price_override(schema, combinations_num, current_price):
 def create_products_by_type(
         product_type, schema, placeholder_dir, how_many=10, create_images=True,
         stdout=None):
-    category = get_or_create_category(schema['category'], placeholder_dir)
+    category = get_or_create_category({'name': schema['product_category']}, placeholder_dir)
 
     for row in range(0, len(schema)):
         product = create_product(
             product_type=product_type, category=category, name=schema['name'], description=schema['description'],
-            price=schema['price'])
+            price=schema['price'], affiliate_url='https://www.amazon.in/gp/product/B079PSMFWN/ref=s9u_simh_gw_i3?ie=UTF8&pd_rd_i=B079PSMFWN&pd_rd_r=4c6bd947-b7da-11e8-a3ff-6b9ce7df36d7&pd_rd_w=JipUD&pd_rd_wg=ITo7A&pf_rd_m=A1VBAL9TL5WCBF&pf_rd_s=&pf_rd_r=W9EEBNGMZP4SH1SH3Z9K&pf_rd_t=36701&pf_rd_p=181f688c-6d9c-493c-bb5f-8ad2f8aba8bf&pf_rd_i=desktop')
         set_product_attributes(product, product_type)
         if create_images:
             type_placeholders = os.path.join(
@@ -199,6 +211,8 @@ def create_products_by_type(
 def create_products_by_schema(placeholder_dir, how_many, create_images,
                               stdout=None, schema=DEFAULT_SCHEMA):
     for product_type, type_schema in create_product_types_by_schema(schema):
+        import pdb
+        pdb.set_trace()
         create_products_by_type(
             product_type, type_schema, placeholder_dir,
             how_many=how_many, create_images=create_images, stdout=stdout)
@@ -207,10 +221,11 @@ def create_products_by_schema(placeholder_dir, how_many, create_images,
 
 
 def create_products_by_csv(placeholder_dir,csv_file='data.csv', stdout=None):
-    for product_type, type_row in create_product_types_by_csv(csv_file):
+    for product_type, type_schema in create_product_types_by_csv(csv_file):
+        import pdb
+        pdb.set_trace()
         create_products_by_type(
-            product_type, type_schema, placeholder_dir,
-            how_many=how_many, create_images=create_images, stdout=stdout)
+            product_type, type_schema, placeholder_dir, create_images=False, stdout=stdout)
 
 
 class SaleorProvider(BaseProvider):
@@ -245,7 +260,7 @@ def get_or_create_category(category_schema, placeholder_dir):
     # image_name = category_schema['image_name']
     # image_dir = get_product_list_images_dir(placeholder_dir)
     defaults = {
-        'description': category_schema['description']}
+        'description': category_schema.get('description', '')}
         #'slug': fake.slug(category_name)}
         # 'background_image': get_image(image_dir, image_name)}
     return Category.objects.get_or_create(
@@ -267,7 +282,7 @@ def get_or_create_collection(name, placeholder_dir, image_name):
 def create_product(**kwargs):
     description = kwargs.get('description')
     defaults = {
-        'price': fake.money(),
+        'price': kwargs.get('price'),
         'description': '\n\n'.join(description),
         'seo_description': strip_html_and_truncate(description[0], 300)}
     defaults.update(kwargs)
