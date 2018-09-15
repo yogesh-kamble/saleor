@@ -158,7 +158,7 @@ def get_variant_combinations(product):
     return [
         {str(attr_value.attribute.pk): str(attr_value.pk)
          for attr_value in combination}
-        for combination in all_combinations]
+        for combination in all_combinations] if all_combinations else []
 
 
 def get_price_override(schema, combinations_num, current_price):
@@ -174,11 +174,12 @@ def create_products_by_type(
         product_type, schema, placeholder_dir, how_many=10, create_images=True,
         stdout=None):
     category = get_or_create_category({'name': schema['product_category']}, placeholder_dir)
+    price = re.search(r'(?P<price>\d+)', schema['price']).group('price')
 
     for row in range(0, len(schema)):
         product = create_product(
             product_type=product_type, category=category, name=schema['name'], description=schema['description'],
-            price=schema['price'], affiliate_url='https://www.amazon.in/gp/product/B079PSMFWN/ref=s9u_simh_gw_i3?ie=UTF8&pd_rd_i=B079PSMFWN&pd_rd_r=4c6bd947-b7da-11e8-a3ff-6b9ce7df36d7&pd_rd_w=JipUD&pd_rd_wg=ITo7A&pf_rd_m=A1VBAL9TL5WCBF&pf_rd_s=&pf_rd_r=W9EEBNGMZP4SH1SH3Z9K&pf_rd_t=36701&pf_rd_p=181f688c-6d9c-493c-bb5f-8ad2f8aba8bf&pf_rd_i=desktop')
+            price=int(price), affiliate_url='https://www.amazon.in/gp/product/B079PSMFWN/ref=s9u_simh_gw_i3?ie=UTF8&pd_rd_i=B079PSMFWN&pd_rd_r=4c6bd947-b7da-11e8-a3ff-6b9ce7df36d7&pd_rd_w=JipUD&pd_rd_wg=ITo7A&pf_rd_m=A1VBAL9TL5WCBF&pf_rd_s=&pf_rd_r=W9EEBNGMZP4SH1SH3Z9K&pf_rd_t=36701&pf_rd_p=181f688c-6d9c-493c-bb5f-8ad2f8aba8bf&pf_rd_i=desktop')
         set_product_attributes(product, product_type)
         if create_images:
             type_placeholders = os.path.join(
@@ -211,8 +212,6 @@ def create_products_by_type(
 def create_products_by_schema(placeholder_dir, how_many, create_images,
                               stdout=None, schema=DEFAULT_SCHEMA):
     for product_type, type_schema in create_product_types_by_schema(schema):
-        import pdb
-        pdb.set_trace()
         create_products_by_type(
             product_type, type_schema, placeholder_dir,
             how_many=how_many, create_images=create_images, stdout=stdout)
@@ -222,8 +221,6 @@ def create_products_by_schema(placeholder_dir, how_many, create_images,
 
 def create_products_by_csv(placeholder_dir,csv_file='data.csv', stdout=None):
     for product_type, type_schema in create_product_types_by_csv(csv_file):
-        import pdb
-        pdb.set_trace()
         create_products_by_type(
             product_type, type_schema, placeholder_dir, create_images=False, stdout=stdout)
 
@@ -280,6 +277,8 @@ def get_or_create_collection(name, placeholder_dir, image_name):
 
 
 def create_product(**kwargs):
+    import pdb
+    pdb.set_trace()
     description = kwargs.get('description')
     defaults = {
         'price': kwargs.get('price'),
