@@ -116,9 +116,10 @@ class Product(SeoModel):
     charge_taxes = models.BooleanField(default=True)
     tax_rate = models.CharField(
         max_length=128, default=DEFAULT_TAX_RATE_NAME, blank=True)
-    affiliate_url = models.URLField(blank=True, null=True, default=None, help_text='Insert the Affiliate Product Url '
-                                                                                   'which will replace Add to Cart '
-                                                                                   'button with Affiliate Url Click')
+    affiliate_url = models.URLField(blank=True, null=True, default=None, max_length=500,
+                                    help_text='Insert the Affiliate Product Url '
+                                              'which will replace Add to Cart '
+                                              'button with Affiliate Url Click')
 
     objects = ProductQuerySet.as_manager()
     translated = TranslationProxy()

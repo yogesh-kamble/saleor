@@ -8,7 +8,7 @@ from ...utils.random_data import (
     add_address_to_admin, create_collections_by_schema, create_menus,
     create_orders, create_page, create_product_sales,
     create_products_by_schema, create_shipping_methods, create_users,
-    create_vouchers, set_homepage_collection)
+    create_vouchers, set_homepage_collection, create_products_by_csv)
 
 
 class Command(BaseCommand):
@@ -55,8 +55,9 @@ class Command(BaseCommand):
         create_images = not options['withoutimages']
         for msg in create_shipping_methods():
             self.stdout.write(msg)
-        create_products_by_schema(self.placeholders_dir, 10, create_images,
+        create_products_by_csv(self.placeholders_dir, 'data.csv',
                                   stdout=self.stdout)
+        '''
         for msg in create_product_sales(5):
             self.stdout.write(msg)
         for msg in create_vouchers():
@@ -79,5 +80,7 @@ class Command(BaseCommand):
             msg = create_superuser(credentials)
             self.stdout.write(msg)
             add_address_to_admin(credentials['email'])
+        '''
         if not options['withoutsearch']:
             self.populate_search_index()
+

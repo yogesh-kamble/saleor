@@ -4,6 +4,9 @@ import random
 import unicodedata
 from datetime import date
 from decimal import Decimal
+import csv
+from collections import defaultdict
+import re
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -43,75 +46,30 @@ PRODUCTS_LIST_DIR = 'products-list/'
 GROCERIES_CATEGORY = {'name': 'Groceries', 'image_name': 'groceries.jpg'}
 
 DEFAULT_SCHEMA = {
-    'T-Shirt': {
+    'Masala': {
         'category': {
-            'name': 'Apparel',
+            'name': 'Foodgrains, oil & Masala',
             'image_name': 'apparel.jpg'},
         'product_attributes': {
-            'Color': ['Blue', 'White'],
-            'Collar': ['Round', 'V-Neck', 'Polo'],
-            'Brand': ['Saleor']},
+            'Brand': ['Orgo King']},
         'variant_attributes': {
-            'Size': ['XS', 'S', 'M', 'L', 'XL', 'XXL']},
-        'images_dir': 't-shirts/',
-        'is_shipping_required': True},
-    'Mugs': {
+            'Size': ['500 gms', '1 kg']},
+        'images_dir': 'grocery/',
+        'is_shipping_required': True
+    },
+    'Atta': {
         'category': {
-            'name': 'Accessories',
-            'image_name': 'accessories.jpg'},
+            'name': 'Atta, Flours & Sooji',
+            'image_name': 'apparel.jpg'},
         'product_attributes': {
-            'Brand': ['Saleor']},
-        'variant_attributes': {},
-        'images_dir': 'mugs/',
-        'is_shipping_required': True},
-    'Coffee': {
-        'category': {
-            'name': 'Coffees',
-            'image_name': 'coffees.jpg',
-            'parent': GROCERIES_CATEGORY},
-        'product_attributes': {
-            'Coffee Genre': ['Arabica', 'Robusta'],
-            'Brand': ['Saleor']},
+            'Brand': ['Orgo King']},
         'variant_attributes': {
-            'Box Size': ['100g', '250g', '500g', '1kg']},
-        'different_variant_prices': True,
-        'images_dir': 'coffee/',
-        'is_shipping_required': True},
-    'Candy': {
-        'category': {
-            'name': 'Candies',
-            'image_name': 'candies.jpg',
-            'parent': GROCERIES_CATEGORY},
-        'product_attributes': {
-            'Flavor': ['Sour', 'Sweet'],
-            'Brand': ['Saleor']},
-        'variant_attributes': {
-            'Candy Box Size': ['100g', '250g', '500g']},
-        'images_dir': 'candy/',
-        'is_shipping_required': True},
-    'E-books': {
-        'category': {
-            'name': 'Books',
-            'image_name': 'books.jpg'},
-        'product_attributes': {
-            'Author': ['John Doe', 'Milionare Pirate'],
-            'Publisher': ['Mirumee Press', 'Saleor Publishing'],
-            'Language': ['English', 'Pirate']},
-        'variant_attributes': {},
-        'images_dir': 'books/',
-        'is_shipping_required': False},
-    'Books': {
-        'category': {
-            'name': 'Books',
-            'image_name': 'books.jpg'},
-        'product_attributes': {
-            'Author': ['John Doe', 'Milionare Pirate'],
-            'Publisher': ['Mirumee Press', 'Saleor Publishing'],
-            'Language': ['English', 'Pirate']},
-        'variant_attributes': {
-            'Cover': ['Soft', 'Hard']},
-        'images_dir': 'books/',
-        'is_shipping_required': True}}
+            'Size': ['500 gms', '1 kg']},
+        'images_dir': 'atta/',
+        'is_shipping_required': True
+    }
+}
+
 COLLECTIONS_SCHEMA = [
     {
         'name': 'Summer collection',
@@ -155,6 +113,26 @@ def create_product_types_by_schema(root_schema):
         results.append((product_type, schema))
     return results
 
+def create_product_types_by_csv(csv_file):
+    result = []
+    with open(csv_file, encoding='UTF-8') as csvfile:
+        csvreader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+        for row in csvreader:
+            # <option value=""500gms"" class=""attached enabled"">500gms</option><option value=""1kg"" class=""attached enabled"">1kg</option>"
+            '''
+            'product_attributes': {
+                'Color': ['Blue', 'White'],
+                'Collar': ['Round', 'V-Neck', 'Polo'],
+            '''
+            attributes_value = re.findall(r'value=""(\w+)""', row['variants'])
+            if (attributes_value):
+                row['product_attributes'] = {
+                    'Size': attributes_value
+                }
+            product_type = create_product_type_with_attributes('Affiliate_Product', row)
+            result.append((product_type, row))
+    return result
+
 
 def set_product_attributes(product, product_type):
     attr_dict = {}
@@ -195,38 +173,40 @@ def get_price_override(schema, combinations_num, current_price):
 def create_products_by_type(
         product_type, schema, placeholder_dir, how_many=10, create_images=True,
         stdout=None):
-    category = get_or_create_category(schema['category'], placeholder_dir)
+    category = get_or_create_category({'name': schema['product_category']}, placeholder_dir)
+    price = re.search(r'(?P<price>\d+)', schema['price']).group('price')
 
-    for dummy in range(how_many):
-        product = create_product(
-            product_type=product_type, category=category)
-        set_product_attributes(product, product_type)
-        if create_images:
-            type_placeholders = os.path.join(
-                placeholder_dir, schema['images_dir'])
-            create_product_images(
-                product, random.randrange(1, 5), type_placeholders)
-        variant_combinations = get_variant_combinations(product)
+    # for row in range(0, len(schema)):
+    product = create_product(
+        product_type=product_type, category=category, name=schema['name'], description=schema['description'],
+        price=int(price), affiliate_url=schema['Product-href'])
+    set_product_attributes(product, product_type)
+    if create_images:
+        type_placeholders = os.path.join(
+            placeholder_dir, 'naturestokri')
+        create_product_images(
+            product, 1, type_placeholders, schema['Product'])
+    variant_combinations = get_variant_combinations(product)
 
-        prices = get_price_override(
-            schema, len(variant_combinations), product.price)
-        variants_with_prices = itertools.zip_longest(
-            variant_combinations, prices)
+    prices = get_price_override(
+        schema, len(variant_combinations), product.price)
+    variants_with_prices = itertools.zip_longest(
+        variant_combinations, prices)
 
-        for i, variant_price in enumerate(variants_with_prices, start=1337):
-            attr_combination, price = variant_price
-            sku = '%s-%s' % (product.pk, i)
-            create_variant(
-                product, attributes=attr_combination, sku=sku,
-                price_override=price)
+    for i, variant_price in enumerate(variants_with_prices, start=1337):
+        attr_combination, price = variant_price
+        sku = '%s-%s' % (product.pk, i)
+        create_variant(
+            product, attributes=attr_combination, sku=sku,
+            price_override=price)
 
-        if not variant_combinations:
-            # Create min one variant for products without variant level attrs
-            sku = '%s-%s' % (product.pk, fake.random_int(1000, 100000))
-            create_variant(product, sku=sku)
-        if stdout is not None:
-            stdout.write('Product: %s (%s), %s variant(s)' % (
-                product, product_type.name, len(variant_combinations) or 1))
+    if not variant_combinations:
+        # Create min one variant for products without variant level attrs
+        sku = '%s-%s' % (product.pk, fake.random_int(1000, 100000))
+        create_variant(product, sku=sku)
+    if stdout is not None:
+        stdout.write('Product: %s (%s), %s variant(s)' % (
+            product, product_type.name, len(variant_combinations) or 1))
 
 
 def create_products_by_schema(placeholder_dir, how_many, create_images,
@@ -235,6 +215,14 @@ def create_products_by_schema(placeholder_dir, how_many, create_images,
         create_products_by_type(
             product_type, type_schema, placeholder_dir,
             how_many=how_many, create_images=create_images, stdout=stdout)
+
+
+
+
+def create_products_by_csv(placeholder_dir,csv_file='data.csv', stdout=None):
+    for product_type, type_schema in create_product_types_by_csv(csv_file):
+        create_products_by_type(
+            product_type, type_schema, placeholder_dir, stdout=stdout)
 
 
 class SaleorProvider(BaseProvider):
@@ -266,12 +254,12 @@ def get_or_create_category(category_schema, placeholder_dir):
     else:
         parent_id = None
     category_name = category_schema['name']
-    image_name = category_schema['image_name']
-    image_dir = get_product_list_images_dir(placeholder_dir)
+    # image_name = category_schema['image_name']
+    # image_dir = get_product_list_images_dir(placeholder_dir)
     defaults = {
-        'description': fake.text(),
-        'slug': fake.slug(category_name),
-        'background_image': get_image(image_dir, image_name)}
+        'description': category_schema.get('description', ''),
+        'slug': fake.slug(category_name)}
+        # 'background_image': get_image(image_dir, image_name)}
     return Category.objects.get_or_create(
         name=category_name, parent_id=parent_id, defaults=defaults)[0]
 
@@ -289,10 +277,9 @@ def get_or_create_collection(name, placeholder_dir, image_name):
 
 
 def create_product(**kwargs):
-    description = fake.paragraphs(5)
+    description = kwargs.get('description')
     defaults = {
-        'name': fake.company(),
-        'price': fake.money(),
+        'price': kwargs.get('price'),
         'description': '\n\n'.join(description),
         'seo_description': strip_html_and_truncate(description[0], 300)}
     defaults.update(kwargs)
@@ -302,13 +289,12 @@ def create_product(**kwargs):
 def create_variant(product, **kwargs):
     defaults = {
         'product': product,
-        'quantity': fake.random_int(1, 50),
-        'quantity_allocated': fake.random_int(1, 50)}
+        'quantity': kwargs.get('quantity', 5),
+        'quantity_allocated': 0}
     defaults.update(kwargs)
     variant = ProductVariant(**defaults)
     if 'cost_price' not in kwargs:
-        variant.cost_price = (variant.base_price * Decimal(
-            fake.random_int(10, 99) / 100)).quantize()
+        variant.cost_price = variant.base_price
     if variant.attributes:
         attributes = variant.product.product_type.variant_attributes.all()
         variant.name = get_name_from_attributes(variant, attributes)
@@ -316,9 +302,9 @@ def create_variant(product, **kwargs):
     return variant
 
 
-def create_product_image(product, placeholder_dir):
+def create_product_image(product, placeholder_dir, image_info):
     placeholder_root = os.path.join(settings.PROJECT_ROOT, placeholder_dir)
-    image_name = random.choice(os.listdir(placeholder_root))
+    image_name = 'rice.jpeg'
     image = get_image(placeholder_dir, image_name)
     product_image = ProductImage(product=product, image=image)
     product_image.save()
@@ -347,9 +333,9 @@ def create_attribute_value(attribute, **kwargs):
     return attribute_value
 
 
-def create_product_images(product, how_many, placeholder_dir):
+def create_product_images(product, how_many, placeholder_dir, image_info):
     for dummy in range(how_many):
-        create_product_image(product, placeholder_dir)
+        create_product_image(product, placeholder_dir, image_info)
 
 
 def create_address():
